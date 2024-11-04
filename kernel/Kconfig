@@ -94,7 +94,7 @@ config KSU_SUSFS_ENABLE_LOG
 
 config KSU_SUSFS_SUS_SU
     bool "Enable SUS-SU in runtime temporarily (experimental)"
-    depends on KSU_SUSFS
+    depends on KSU_SUSFS && KPROBES
     default n
     help
       - Allow user to enable or disable core ksu kprobes hooks temporarily in runtime.

@@ -64,6 +64,10 @@ bool ksu_execveat_hook __read_mostly = true;
 bool ksu_input_hook __read_mostly = true;
 #endif
 
+#ifdef CONFIG_KSU_SUSFS_SUS_SU
+bool ksu_devpts_hook = false;
+#endif
+
 u32 ksu_devpts_sid;
 
 void on_post_fs_data(void)
@@ -491,6 +495,26 @@ static int execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
 	return ksu_handle_execveat_ksud(fd, filename_ptr, &argv, NULL, NULL);
 }
 
+// https://elixir.bootlin.com/linux/v5.10.158/source/fs/exec.c#L1864
+static int execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
+{
+	int *fd = (int *)&PT_REGS_PARM1(regs);
+	struct filename **filename_ptr =
+		(struct filename **)&PT_REGS_PARM2(regs);
+	struct user_arg_ptr argv;
+#ifdef CONFIG_COMPAT
+	argv.is_compat = PT_REGS_PARM3(regs);
+	if (unlikely(argv.is_compat)) {
+		argv.ptr.compat = PT_REGS_CCALL_PARM4(regs);
+	} else {
+		argv.ptr.native = PT_REGS_CCALL_PARM4(regs);
+	}
+#else
+	argv.ptr.native = PT_REGS_PARM3(regs);
+#endif
+	return ksu_handle_execveat_ksud(fd, filename_ptr, &argv, NULL, NULL);
+}
+
 static int sys_execve_handler_pre(struct kprobe *p, struct pt_regs *regs)
 {
 	struct pt_regs *real_regs = PT_REAL_REGS(regs);
@@ -523,6 +547,17 @@ __maybe_unused static int vfs_read_handler_pre(struct kprobe *p,
 	size_t *count_ptr = (size_t *)&PT_REGS_PARM3(regs);
 	loff_t **pos_ptr = (loff_t **)&PT_REGS_CCALL_PARM4(regs);
 
+	return ksu_handle_vfs_read(file_ptr, buf_ptr, count_ptr, pos_ptr);
+}
+
+// remove this later!
+__maybe_unused static int vfs_read_handler_pre(struct kprobe *p,
+					       struct pt_regs *regs)
+{
+	struct file **file_ptr = (struct file **)&PT_REGS_PARM1(regs);
+	char __user **buf_ptr = (char **)&PT_REGS_PARM2(regs);
+	size_t *count_ptr = (size_t *)&PT_REGS_PARM3(regs);
+	loff_t **pos_ptr = (loff_t **)&PT_REGS_CCALL_PARM4(regs);
 	return ksu_handle_vfs_read(file_ptr, buf_ptr, count_ptr, pos_ptr);
 }
 

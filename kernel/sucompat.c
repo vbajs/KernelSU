@@ -212,6 +212,17 @@ __maybe_unused static int faccessat_handler_pre(struct kprobe *p,
 	return ksu_handle_faccessat(dfd, filename_user, mode, flags);
 }
 
+__maybe_unused static int faccessat_handler_pre(struct kprobe *p,
+						struct pt_regs *regs)
+{
+	int *dfd = (int *)&PT_REGS_PARM1(regs);
+	const char __user **filename_user = (const char **)&PT_REGS_PARM2(regs);
+	int *mode = (int *)&PT_REGS_PARM3(regs);
+	// Both sys_ and do_ is C function
+	int *flags = (int *)&PT_REGS_CCALL_PARM4(regs);
+	return ksu_handle_faccessat(dfd, filename_user, mode, flags);
+}
+
 static int sys_faccessat_handler_pre(struct kprobe *p, struct pt_regs *regs)
 {
 	struct pt_regs *real_regs = PT_REAL_REGS(regs);
@@ -365,3 +376,25 @@ void ksu_sucompat_exit()
 	unregister_kprobe(&pts_unix98_lookup_kp);
 #endif
 }
+
+
+#ifdef CONFIG_KSU_SUSFS_SUS_SU
+extern bool ksu_devpts_hook;
+
+void ksu_susfs_disable_sus_su(void) {
+	enable_kprobe(&execve_kp);
+	enable_kprobe(&newfstatat_kp);
+	enable_kprobe(&faccessat_kp);
+	enable_kprobe(&pts_unix98_lookup_kp);
+	ksu_devpts_hook = false;
+}
+
+void ksu_susfs_enable_sus_su(void) {
+	disable_kprobe(&execve_kp);
+	disable_kprobe(&newfstatat_kp);
+	disable_kprobe(&faccessat_kp);
+	disable_kprobe(&pts_unix98_lookup_kp);
+	ksu_devpts_hook = true;
+}
+#endif
+

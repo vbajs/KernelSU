@@ -6,6 +6,8 @@
 #include "avc.h"
 #endif
 
+#define KERNEL_SU_DOMAIN "u:r:su:s0"
+
 #ifdef CONFIG_KSU_SUSFS
 #define KERNEL_INIT_DOMAIN "u:r:init:s0"
 #define KERNEL_ZYGOTE_DOMAIN "u:r:zygote:s0"

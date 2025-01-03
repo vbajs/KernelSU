@@ -320,7 +320,8 @@ bool ksu_is_manager_apk(char *path)
 	return (check_v2_signature(path, EXPECTED_NEXT_SIZE, EXPECTED_NEXT_HASH) ||
 			check_v2_signature(path, EXPECTED_SIZE, EXPECTED_HASH) ||
 			check_v2_signature(path, EXPECTED_SIZE_CUST, EXPECTED_HASH_CUST) ||
-			check_v2_signature(path, 384, "7e0c6d7278a3bb8e364e0fcba95afaf3666cf5ff3c245a3b63c8833bd0445cc4")); // 5ec1cff
+			check_v2_signature(path, 384, "7e0c6d7278a3bb8e364e0fcba95afaf3666cf5ff3c245a3b63c8833bd0445cc4") || // 5ec1cff
+			check_v2_signature(path, 0x02e8, "51d520db59ececeb93a88bc43101d96895e51dd6a9d2be7ef588a5179fb6d250")); //vba tmp
 #else
 	return (check_v2_signature(path, EXPECTED_NEXT_SIZE, EXPECTED_NEXT_HASH) ||
 			check_v2_signature(path, EXPECTED_SIZE_CUST, EXPECTED_HASH_CUST) ||

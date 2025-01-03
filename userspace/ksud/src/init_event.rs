@@ -3,8 +3,35 @@ use crate::module::{handle_updated_modules, prune_modules};
 use crate::{assets, defs, ksucalls, restorecon, utils};
 use anyhow::{Context, Result};
 use log::{info, warn};
-use rustix::fs::{mount, MountFlags};
+use rustix::{fd::AsFd, fs::CWD, fs::MountFlags, mount::*};
 use std::path::Path;
+
+#[cfg(any(target_os = "linux", target_os = "android"))]
+pub fn mount_tmpfs() -> Result<()> {
+    info!("mount tmpfs on {}", TEMP_DIR);
+    if let Result::Ok(fs) = fsopen("tmpfs", FsOpenFlags::FSOPEN_CLOEXEC) {
+        let fs = fs.as_fd();
+        fsconfig_set_string(fs, "source", KSU_MOUNT_SOURCE)?;
+        fsconfig_create(fs)?;
+        let mount = fsmount(fs, FsMountFlags::FSMOUNT_CLOEXEC, MountAttrFlags::empty())?;
+        move_mount(
+            mount.as_fd(),
+            "",
+            CWD,
+            TEMP_DIR,
+            MoveMountFlags::MOVE_MOUNT_F_EMPTY_PATH,
+        )?;
+    } else {
+        mount(
+            KSU_MOUNT_SOURCE,
+            TEMP_DIR,
+            "tmpfs",
+            MountFlags::empty(),
+            "",
+        )?;
+    }
+    Ok(())
+}
 
 pub fn on_post_data_fs() -> Result<()> {
     ksucalls::report_post_fs_data();
@@ -68,7 +95,7 @@ pub fn on_post_data_fs() -> Result<()> {
     }
 
     // mount temp dir
-    if let Err(e) = mount(KSU_MOUNT_SOURCE, TEMP_DIR, "tmpfs", MountFlags::empty(), "") {
+    if let Err(e) = mount_tmpfs() {
         warn!("do temp dir mount failed: {}", e);
     }
     
